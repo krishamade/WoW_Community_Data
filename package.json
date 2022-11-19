@@ -1,0 +1,29 @@
+{
+  "name": "wow_community_data",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krishamade/WoW_Community_Data.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/krishamade/WoW_Community_Data/issues"
+  },
+  "homepage": "https://github.com/krishamade/WoW_Community_Data#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "lua2json": "^1.1.2",
+    "moment": "^2.29.4",
+    "package.json": "^2.0.1",
+    "superagent": "^8.0.3",
+    "ws": "^8.11.0"
+  }
+}
