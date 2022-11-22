@@ -16,11 +16,17 @@ const server = http.createServer(app);
 
 const battleNetToken = process.env.BATTLE_NET_TOKEN;
 
-var communityInformationWoWFileLocation = "C:\\Program Files (x86)\\World of Warcraft\\_retail_\\WTF\\Account\\KHAMADE22\\Illidan\\Mystwydow\\SavedVariables\\CommunityInformation.lua"
+
+// Community Information Objects and Arrays
+var communityInformationWoWFileLocation = process.env.COMMUNITYDATAFILELOCATION;
 
 var communityInformation = {};
 
 var communityInformationNames = [];
+
+var mPlusData = [];
+
+test = ["Mystwydow-Illidan", "Stormyshadow-Sargeras", "Mawmense-Sargeras"]
 
 //Create web socket server
 const wss = new WebSocket.Server({
@@ -28,6 +34,20 @@ const wss = new WebSocket.Server({
 });
 
 server.listen(process.env.EXPRESSPORT, () => console.log("Websocket Server Started " + moment().format('LLLL')));
+
+app.get('/CommunityLuaData', (req, res) => {
+    res.send(communityInformation);
+});
+
+app.get('/CommunityMPlusData', (req, res) => {
+    res.send(mPlusData);
+});
+
+/* Section for Accepting LUA Data through API
+
+app.get('/CommunityMPlusData', (req, res) => {
+    res.send(mPlusData);
+}); */
 
 const readCommunityInformation = () => new Promise((resolve, reject) => {
     // Get specific variable from Lua file and ignore any unknown types and operators
@@ -48,29 +68,31 @@ const filterCommunityNames = () => new Promise((resolve, reject) => {
             let newItem = item.name + "-Illidan";
             communityInformationNames.push(newItem.toLowerCase());
         } else {
-            communityInformationNames.push(item.name.toLowerCase())
+            communityInformationNames.push(item.name.toLowerCase());
         }
 
     });
     resolve(communityInformationNames);
-})
+});
 
-const getRaiderIoData = async () => {
-    test = ["Mystwydow-Illidan", "Stormyshadow-Sargeras", "Mawmense-Sargeras"]
+const getMPlusData = async () => {
 
-    for (let i = 0; i < communityInformationNames.length; i++) {
-        
+
+    for (let i = 0; i < 100; i++) {
+
         let name = communityInformationNames[i].split("-")[0];
         let realm = communityInformationNames[i].split("-")[1];
-        await sleep(100);
+
+        //Adjust Timeout for 400 Errors
+        await sleep(500);
         superagent
             .get(`https://us.api.blizzard.com/profile/wow/character/${realm}/${name}/mythic-keystone-profile?namespace=profile-us&locale=en_US&access_token=${battleNetToken}`)
             .set('Accept', 'application/json')
             .set('Content-type', 'application/json')
             .then(response => {
                 let payloadData = response._body;
-                console.log(payloadData);
-
+                mPlusData.push(payloadData);
+                //console.log(payloadData);                
             }).catch(error => {
                 console.log("There was an error: ", error)
             }).finally()
@@ -83,15 +105,18 @@ const sleep = ms => new Promise(res => setTimeout(res, ms))
 
 const printConsole = () => new Promise((resolve, reject) => {
     //console.log("Community Information: ", communityInformation);
-    resolve (console.log("Community Information Names: ", communityInformationNames));
+    mPlusData.map(item => {
+        console.log(item);
+    });
+    resolve();
 });
 
 const runProgram = async () => {
     await readCommunityInformation();
     await filterCommunityNames();
-    await getRaiderIoData();
+    await getMPlusData();
     await printConsole();
-}
+};
 
 runProgram();
 //setInterval(updateClients, 5000)
