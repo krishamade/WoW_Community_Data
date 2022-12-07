@@ -14,11 +14,11 @@ app.use(express.static('public'));
 
 const server = http.createServer(app);
 
-const battleNetToken = process.env.BATTLE_NET_TOKEN;
-
-
 // Community Information Objects and Arrays
+// LUA Table Information
 var communityInformationWoWFileLocation = process.env.COMMUNITYDATAFILELOCATION;
+var luaTableCurrentlyOnlineCommunityVariable = "allCommunityMembers";
+
 
 var communityInformation = {};
 
@@ -28,16 +28,41 @@ var mPlusData = [];
 
 test = ["Mystwydow-Illidan", "Stormyshadow-Sargeras", "Mawmense-Sargeras"]
 
-//Create web socket server
-const wss = new WebSocket.Server({
-    server
-});
+const clientId = process.env.BATTLE_NET_CLIENTID;
+const clientSecret = process.env.BATTLE_NET_SECRET;
 
-server.listen(process.env.EXPRESSPORT, () => console.log("Websocket Server Started " + moment().format('LLLL')));
+// Battle.net OAuth2 Token
+let battleNetToken = '';
 
-app.get('/CommunityLuaData', (req, res) => {
+const requestBody = {
+    grant_type: 'client_credentials',
+};
+
+superagent
+    .post('https://oauth.battle.net/token')
+    .auth(clientId, clientSecret)
+    .send(requestBody)
+    .set('Content-type', 'application/x-www-form-urlencoded')
+    .then(response => {
+        // Get the access token from the response
+        const battleNetToken = response.body.access_token;
+        // Use the access token to make authenticated requests to battle.net API
+        console.log("Battle.Net Authorization Successful: " + battleNetToken)
+    })
+    .catch(error => {
+        console.log("Battle.Net Authorization errors: " + error)
+        // Handle error
+    });
+
+
+app.get('/CommunityLuaRawData', (req, res) => {
     res.send(communityInformation);
 });
+
+app.get('/CurrentlyOnlineCommunityNamesAndRealms', (req, res) => {
+    res.send(communityInformationNames);
+});
+
 
 app.get('/CommunityMPlusData', (req, res) => {
     res.send(mPlusData);
@@ -49,9 +74,9 @@ app.get('/CommunityMPlusData', (req, res) => {
     res.send(mPlusData);
 }); */
 
-const readCommunityInformation = () => new Promise((resolve, reject) => {
+const readLuaTableInformation = () => new Promise((resolve, reject) => {
     // Get specific variable from Lua file and ignore any unknown types and operators
-    lua2json.getVariable(communityInformationWoWFileLocation, 'allCommunityMembers', function (err, result) {
+    lua2json.getVariable(communityInformationWoWFileLocation, luaTableCurrentlyOnlineCommunityVariable, function (err, result) {
         communityInformation = result;
         //console.log(err, result);
         //console.log("Community Information: ", communityInformation);
@@ -78,7 +103,7 @@ const filterCommunityNames = () => new Promise((resolve, reject) => {
 const getMPlusData = async () => {
 
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < communityInformationNames.length; i++) {
 
         let name = communityInformationNames[i].split("-")[0];
         let realm = communityInformationNames[i].split("-")[1];
@@ -100,6 +125,17 @@ const getMPlusData = async () => {
     }
 }
 
+
+//Create web socket server
+const wss = new WebSocket.Server({
+    server
+});
+
+server.listen(process.env.EXPRESSPORT, () => console.log("Server Listening on port " + process.env.EXPRESSPORT + " " + moment().format('LLLL')));
+
+
+
+//Below are server hosting settings and constructors
 //Creates function for async sleep if needed to delay functions
 const sleep = ms => new Promise(res => setTimeout(res, ms))
 
@@ -112,9 +148,9 @@ const printConsole = () => new Promise((resolve, reject) => {
 });
 
 const runProgram = async () => {
-    await readCommunityInformation();
+    await readLuaTableInformation();
     await filterCommunityNames();
-    await getMPlusData();
+    //await getMPlusData();
     await printConsole();
 };
 
